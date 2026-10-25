@@ -15,8 +15,8 @@ const apps = [
         version: "2026.9.19",
         bundleId: "com.innersloth.amongus",
         platform: "ios", // iOS Direct Install için
-        ipaUrl: "https://raw.githubusercontent.com/kullanici/app-store-assets/main/apps/amongus.ipa", // İleride ipa atacağın raw link
-        iconUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co2btq.png",
+        ipaUrl: "https://github.com/TRServer-Inc/app-store-assets/releases/download/Among-Us-iOS-v1.0.0/com.innersloth.amongus-2026.19.0-Decrypted.ipa", // İleride ipa atacağın raw link
+        iconUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi7_jKzycbNB-CJExXK0L2VYTdTsI_qOOsNoEKbUm2Xw&s=10",
         downloads: 0
     },
     {
