@@ -6,19 +6,42 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// şimdilik boş uygulama listesi
-const apps = [];
+// Among Us verisini içeren ilk uygulamamız
+const apps = [
+    {
+        id: "among-us",
+        name: "Among Us",
+        description: "Uzay gemisinde katili bulma ve hayatta kalma oyunu.",
+        version: "2026.3.8",
+        bundleId: "com.innersloth.amongus",
+        platform: "ios", // iOS Direct Install için
+        ipaUrl: "https://raw.githubusercontent.com/kullanici/app-store-assets/main/apps/amongus.ipa", // İleride ipa atacağın raw link
+        iconUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co2btq.png",
+        downloads: 0
+    },
+    {
+        id: "among-us-win",
+        name: "Among Us (PC)",
+        description: "Windows masaüstü sürümü.",
+        version: "2026.3.8",
+        platform: "windows", // Windows için
+        downloadUrl: "https://raw.githubusercontent.com/kullanici/app-store-assets/main/apps/amongus.zip", // İleride exe/zip atacağın link
+        iconUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co2btq.png",
+        downloads: 0
+    }
+];
 
-// servis durum kontrolü
+// Servis durum kontrolü
 app.get('/', (req, res) => {
-    res.json({ status: "aktif", message: "appvault backend servisi çalışıyor. henüz uygulama yüklenmedi." });
+    res.json({ status: "aktif", message: "appvault backend servisi çalışıyor. Among Us eklendi." });
 });
 
+// Uygulama listesini dönen endpoint
 app.get('/api/apps', (req, res) => {
     res.json(apps);
 });
 
-// ios otf plist generator (ileride ipa eklediğinde direkt çalışacak)
+// iOS OTA (Over-The-Air) Plist Manifest Üreteci
 app.get('/manifest', (req, res) => {
     const { title, bundleId, version, ipa } = req.query;
 
@@ -60,6 +83,16 @@ app.get('/manifest', (req, res) => {
 
     res.set('Content-Type', 'text/xml');
     res.send(plistXml);
+});
+
+// İndirme sayacı
+app.post('/api/download/:id', (req, res) => {
+    const appItem = apps.find(a => a.id === req.params.id);
+    if (appItem) {
+        appItem.downloads += 1;
+        return res.json({ success: true, downloads: appItem.downloads });
+    }
+    res.status(404).json({ success: false, message: 'uygulama bulunamadı' });
 });
 
 app.listen(PORT, () => {
