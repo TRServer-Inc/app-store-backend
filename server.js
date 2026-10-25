@@ -25,7 +25,7 @@ const apps = [
         description: "Windows masaüstü sürümü.",
         version: "2026.3.8",
         platform: "windows", // Windows için
-        downloadUrl: "https://raw.githubusercontent.com/kullanici/app-store-assets/main/apps/amongus.zip", // İleride exe/zip atacağın link
+        downloadUrl: "https://github.com/TRServer-Inc/app-store-assets/releases/download/Among-Us-v1.0.0/Among.Us.Windows.rar", // İleride exe/zip atacağın link
         iconUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co2btq.png",
         downloads: 0
     }
