@@ -12,7 +12,7 @@ const apps = [
         id: "among-us",
         name: "Among Us",
         description: "Uzay gemisinde katili bulma ve hayatta kalma oyunu.",
-        version: "2026.3.8",
+        version: "2026.9.19",
         bundleId: "com.innersloth.amongus",
         platform: "ios", // iOS Direct Install için
         ipaUrl: "https://raw.githubusercontent.com/kullanici/app-store-assets/main/apps/amongus.ipa", // İleride ipa atacağın raw link
