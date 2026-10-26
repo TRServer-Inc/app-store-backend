@@ -6,56 +6,31 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// GitHub API cache mekanizması (Render ve GitHub limitine takılmamak için 1 dakika)
-let appsCache = [];
-let lastFetchTime = 0;
-const CACHE_DURATION = 60 * 1000;
-
+// GitHub API limitlerine takılmamak için doğrudan RAW linkten JSON'ları çeken mekanizma
 async function getAppsFromGitHub() {
-    const now = Date.now();
-    if (appsCache.length > 0 && (now - lastFetchTime < CACHE_DURATION)) {
-        return appsCache;
-    }
-
-    const owner = 'TRServer-Inc';
-    const repo = 'app-store-assets';
-    const path = 'apps';
-
     try {
-        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-            headers: { 'User-Agent': 'AppVault-Server' }
-        });
+        // Doğrudan public repodaki RAW json dosyasını çekiyoruz
+        const response = await fetch('https://raw.githubusercontent.com/TRServer-Inc/app-store-assets/main/apps/amongus.json');
         
-        if (!response.ok) throw new Error(`GitHub API hatası: ${response.statusText}`);
-        
-        const files = await response.json();
-        const apps = [];
-
-        for (const file of files) {
-            if (file.name.endsWith('.json')) {
-                const rawResponse = await fetch(file.download_url);
-                if (rawResponse.ok) {
-                    const appData = await rawResponse.json();
-                    apps.push(appData);
-                }
-            }
+        if (response.ok) {
+            const appData = await response.json();
+            return [appData]; // Sitede kart olarak basılması için dizi içinde döndürüyoruz
+        } else {
+            console.error('JSON dosyası çekilemedi, durum kodu:', response.status);
+            return [];
         }
-
-        appsCache = apps;
-        lastFetchTime = now;
-        return apps;
     } catch (error) {
-        console.error('GitHub\'dan uygulamalar çekilirken hata oluştu:', error.message);
-        return appsCache; // Hata durumunda en son cache'i döndür ki sistem patlamasın
+        console.error('GitHub RAW veri çekme hatası:', error.message);
+        return [];
     }
 }
 
 // Servis durum kontrolü
 app.get('/', (req, res) => {
-    res.json({ status: "aktif", message: "appvault backend servisi GitHub dinamik JSON altyapısıyla çalışıyor." });
+    res.json({ status: "aktif", message: "appvault backend servisi GitHub RAW altyapısıyla çalışıyor." });
 });
 
-// Uygulama listesini GitHub reposundaki apps klasöründen dinamik dönen endpoint
+// Uygulama listesini dönen endpoint
 app.get('/api/apps', async (req, res) => {
     const apps = await getAppsFromGitHub();
     res.json(apps);
