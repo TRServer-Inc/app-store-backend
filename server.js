@@ -1,43 +1,56 @@
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
-// Among Us verisini içeren ilk uygulamamız
-const apps = [
-    {
-        id: "among-us",
-        name: "Among Us",
-        description: "Uzay gemisinde katili bulma ve hayatta kalma oyunu.",
-        version: "2026.9.19",
-        bundleId: "com.innersloth.amongus",
-        platform: "ios", // iOS Direct Install için
-        ipaUrl: "https://github.com/TRServer-Inc/app-store-assets/releases/download/Among-Us-iOS-v1.0.0/com.innersloth.amongus-2026.19.0-Decrypted.ipa", // İleride ipa atacağın raw link
-        iconUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi7_jKzycbNB-CJExXK0L2VYTdTsI_qOOsNoEKbUm2Xw&s=10",
-        downloads: 0
-    },
-    {
-        id: "among-us-win",
-        name: "Among Us (PC)",
-        description: "Windows masaüstü sürümü.",
-        version: "2026.3.8",
-        platform: "windows", // Windows için
-        downloadUrl: "https://github.com/TRServer-Inc/app-store-assets/releases/download/Among-Us-Windows-v1.0.0/Among.Us.Windows.rar", // İleride exe/zip atacağın link
-        iconUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi7_jKzycbNB-CJExXK0L2VYTdTsI_qOOsNoEKbUm2Xw&s=10",
-        downloads: 0
+// GitHub API cache mekanizması (sınır takılmasın diye 1 dakika hafızada tutar)
+let appsCache = [];
+let lastFetchTime = 0;
+const CACHE_DURATION = 60 * 1000;
+
+async function getAppsFromGitHub() {
+    const now = Date.now();
+    if (appsCache.length > 0 && (now - lastFetchTime < CACHE_DURATION)) {
+        return appsCache;
     }
-];
+
+    const owner = 'TRServer-Inc';
+    const repo = 'app-store-assets';
+    const path = 'apps';
+
+    try {
+        const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
+        const files = response.data;
+        const apps = [];
+
+        for (const file of files) {
+            if (file.name.endsWith('.json')) {
+                const rawResponse = await axios.get(file.download_url);
+                apps.push(rawResponse.data);
+            }
+        }
+
+        appsCache = apps;
+        lastFetchTime = now;
+        return apps;
+    } catch (error) {
+        console.error('GitHub\'dan uygulamalar çekilirken hata oluştu:', error.message);
+        return appsCache; // Hata durumunda son cache'i döndür ki patlamasın
+    }
+}
 
 // Servis durum kontrolü
 app.get('/', (req, res) => {
-    res.json({ status: "aktif", message: "appvault backend servisi çalışıyor. Among Us eklendi." });
+    res.json({ status: "aktif", message: "appvault backend servisi GitHub dinamik JSON altyapısıyla çalışıyor." });
 });
 
-// Uygulama listesini dönen endpoint
-app.get('/api/apps', (req, res) => {
+// Uygulama listesini GitHub reposundaki apps klasöründen dinamik dönen endpoint
+app.get('/api/apps', async (req, res) => {
+    const apps = await getAppsFromGitHub();
     res.json(apps);
 });
 
@@ -85,11 +98,12 @@ app.get('/manifest', (req, res) => {
     res.send(plistXml);
 });
 
-// İndirme sayacı
-app.post('/api/download/:id', (req, res) => {
+// İndirme sayacı (artık GitHub JSON'larından çalıştığı için geçici bellekte tutulur)
+app.post('/api/download/:id', async (req, res) => {
+    const apps = await getAppsFromGitHub();
     const appItem = apps.find(a => a.id === req.params.id);
     if (appItem) {
-        appItem.downloads += 1;
+        appItem.downloads = (appItem.downloads || 0) + 1;
         return res.json({ success: true, downloads: appItem.downloads });
     }
     res.status(404).json({ success: false, message: 'uygulama bulunamadı' });
