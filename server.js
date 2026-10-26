@@ -1,13 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
-// GitHub API cache mekanizması (sınır takılmasın diye 1 dakika hafızada tutar)
+// GitHub API cache mekanizması (Render ve GitHub limitine takılmamak için 1 dakika)
 let appsCache = [];
 let lastFetchTime = 0;
 const CACHE_DURATION = 60 * 1000;
@@ -23,14 +22,22 @@ async function getAppsFromGitHub() {
     const path = 'apps';
 
     try {
-        const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
-        const files = response.data;
+        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+            headers: { 'User-Agent': 'AppVault-Server' }
+        });
+        
+        if (!response.ok) throw new Error(`GitHub API hatası: ${response.statusText}`);
+        
+        const files = await response.json();
         const apps = [];
 
         for (const file of files) {
             if (file.name.endsWith('.json')) {
-                const rawResponse = await axios.get(file.download_url);
-                apps.push(rawResponse.data);
+                const rawResponse = await fetch(file.download_url);
+                if (rawResponse.ok) {
+                    const appData = await rawResponse.json();
+                    apps.push(appData);
+                }
             }
         }
 
@@ -39,7 +46,7 @@ async function getAppsFromGitHub() {
         return apps;
     } catch (error) {
         console.error('GitHub\'dan uygulamalar çekilirken hata oluştu:', error.message);
-        return appsCache; // Hata durumunda son cache'i döndür ki patlamasın
+        return appsCache; // Hata durumunda en son cache'i döndür ki sistem patlamasın
     }
 }
 
@@ -98,7 +105,7 @@ app.get('/manifest', (req, res) => {
     res.send(plistXml);
 });
 
-// İndirme sayacı (artık GitHub JSON'larından çalıştığı için geçici bellekte tutulur)
+// İndirme sayacı
 app.post('/api/download/:id', async (req, res) => {
     const apps = await getAppsFromGitHub();
     const appItem = apps.find(a => a.id === req.params.id);
